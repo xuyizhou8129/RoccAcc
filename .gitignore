@@ -1,0 +1,20 @@
+out/
+target/
+project/target
+docs/generated
+docs-target/
+*.fir
+*.v
+*.anno.json
+*.swp
+*~
+.addons-dont-touch
+/lib/
+/test_lib/
+/testbuild/
+vcode-rocc.jar
+
+# LSP stuff
+.bloop
+.metals
+/project
