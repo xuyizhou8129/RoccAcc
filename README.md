@@ -1,2 +1,5 @@
 # RoccAcc
-A hardware accelerator built within the Chipyard Rocc
+Repository that holds the implementation for a RoCC accelerator.
+# Prerequisites
+1. SBT
+2. Scala
