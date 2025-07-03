@@ -9,7 +9,7 @@ package object constants extends
 /** Mixin for constants representing options.
  */
 trait OptionConstants {
-  def X = BitPat("b?")
-  def Y = BitPat("b1")
-  def N = BitPat("b0")
+  def X = BitPat("b?") //Don't care, One bit wide
+  def Y = BitPat("b1") //Yes I have a Y-operand, One bit wide
+  def N = BitPat("b0") //I don't have a operand here, One bit wide
 }
