@@ -6,6 +6,7 @@ import freechips.rocketchip.config.Parameters
 import freechips.rocketchip.tile.HasCoreParameters
 import Instructions._
 import vcoderocc.constants._
+import ALU._
 
 /** Trait holding an abstract (non-instantiated) mapping between the instruction
   * bit pattern and its control signals.
@@ -16,18 +17,18 @@ trait DecodeConstants extends HasCoreParameters { // TODO: Not sure if extends n
   val decode_table: Array[(BitPat, List[BitPat])]
 }
 
-/* Control signals in the processor.
+/** Control signals in the processor.
   * These are set during decoding.
   */
 class CtrlSigs extends Bundle { // TODO: Rename to BinOpCtrlSigs?
   /* All control signals used in this coprocessor
-    See rocket-chip's rocket/IDecode.scala#IntCtrlSigs#default */
-    val legal = Bool() // Example control signal.
-  /* List of default control signal values
-    @return List of default control signal values. */
-    
-    def default_decode_ctrl_sigs: List[BitPat] =
-    List(N)
+   * See rocket-chip's rocket/IDecode.scala#IntCtrlSigs#default */
+  val legal = Bool() // Example control signal.
+  val alu_fn = Bits(SZ_ALU_FN)
+  /** List of default control signal values
+    * @return List of default control signal values. */
+  def default_decode_ctrl_sigs: List[BitPat] =
+    List(N, FN_X)
 
   /** Decodes an instruction to its control signals.
     * @param inst The instruction bit pattern to be decoded.
@@ -39,7 +40,7 @@ class CtrlSigs extends Bundle { // TODO: Rename to BinOpCtrlSigs?
     val decoder = freechips.rocketchip.rocket.DecodeLogic(inst, default_decode_ctrl_sigs, decode_table)
     /* Make sequence ordered how signals are ordered.
      * See rocket-chip's rocket/IDecode.scala#IntCtrlSigs#decode#sigs */
-    val ctrl_sigs = Seq(legal)
+    val ctrl_sigs = Seq(legal, alu_fn)
     /* Decoder is a minimized truth-table. We partially apply the map here,
      * which allows us to apply an instruction to get its control signals back.
      * We then zip that with the sequence of names for the control signals. */
@@ -55,5 +56,5 @@ class CtrlSigs extends Bundle { // TODO: Rename to BinOpCtrlSigs?
   */
 class BinOpDecode(implicit val p: Parameters) extends DecodeConstants {
   val decode_table: Array[(BitPat, List[BitPat])] = Array(
-    PLUS_INT-> List())
+    PLUS_INT-> List(Y, FN_ADD))
 }
