@@ -1,3 +1,4 @@
+// Testing an illegal_nonblocking command
 #include <rocc.h>
 
 int main() {

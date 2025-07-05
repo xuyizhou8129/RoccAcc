@@ -1,3 +1,4 @@
+// Testing an illegal command 
 #include <rocc.h>
 
 int main() {

@@ -1,3 +1,4 @@
+// Trying to do a simple addition command using the coprocessor
 #include <rocc.h>
 
 int main() {
