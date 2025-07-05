@@ -1,3 +1,5 @@
+// Defining instructions for the accelerator coprocessor, when calling the macro, generate the corresponding assembly and sending that to the accelerator.
+
 // Borrowed from the sha3 test suite.
 // Based on code by Schuyler Eldridge. Copyright (c) Boston University
 // https://github.com/seldridge/rocket-rocc-examples/blob/master/src/main/c/rocc.h
