@@ -1,3 +1,4 @@
+// Instruction definition for Rocket CPU
 // See LICENSE for license details.
 
 #ifndef RISCV_CSR_ENCODING_H
