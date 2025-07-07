@@ -1,11 +1,11 @@
-package vcoderocc
+package roccacc
 
 import chisel3._
 import chisel3.util._
 import freechips.rocketchip.config.Parameters
 import freechips.rocketchip.tile.HasCoreParameters
 import Instructions._
-import vcoderocc.constants._
+import roccacc.constants._
 import ALU._
 
 /** Trait holding an abstract (non-instantiated) mapping between the instruction

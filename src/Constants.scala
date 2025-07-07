@@ -1,9 +1,9 @@
-package vcoderocc
+package roccacc
 
 import chisel3.util._
 
 package object constants extends
-    vcoderocc.OptionConstants
+    roccacc.OptionConstants
 {}
 
 /** Mixin for constants representing options.

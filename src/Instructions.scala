@@ -1,4 +1,4 @@
-package vcoderocc
+package roccacc
 
 import chisel3.util._
 
