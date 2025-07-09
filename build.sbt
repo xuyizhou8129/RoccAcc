@@ -1,6 +1,6 @@
 organization := "edu.berkeley.cs"
 
-version := "1.0"
+version := "0.0"
 
 name := "rocc-acc"
 // JAR ends up as edu.berkeley.cs:rocc-acc:1.0
