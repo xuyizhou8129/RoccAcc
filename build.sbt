@@ -19,3 +19,8 @@ lazy val chiselSettings = Seq(
 // Apply the Chisel settings
 lazy val roccacc = (project in file("."))
   .settings(chiselSettings)
+  .settings(
+    libraryDependencies ++= Seq(
+      "edu.berkeley.cs" %% "rocketchip" % "1.2.6"
+    )
+  )
