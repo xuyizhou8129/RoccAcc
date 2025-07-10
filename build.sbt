@@ -1,20 +1,20 @@
-organization := "edu.berkeley.cs"
+organization := "edu.northwestern.eecs"
 
 version := "0.0"
 
 name := "rocc-acc"
-// JAR ends up as edu.berkeley.cs:rocc-acc:1.0
 
 // Chosen to be the same version as rocket-chip
-scalaVersion := "2.12.15"
+scalaVersion := "2.13.10"
+// ThisBuild / scalaVersion := "2.13.10"
 
-val chiselVersion = "3.5.2"
+// Chosen to be the same as Chipyard
+val chiselVersion = "3.6.1"
+
 lazy val chiselSettings = Seq(
-  // pull in the Chisel runtime library
-  libraryDependencies ++= Seq("edu.berkeley.cs" %% "chisel3" % chiselVersion),
+  libraryDependencies ++= Seq(
+    "edu.berkeley.cs" %% "chisel3" % chiselVersion,
+    "edu.berkeley.cs" %% "rocketchip" % "1.6.0"
+  ),
   addCompilerPlugin("edu.berkeley.cs" % "chisel3-plugin" % chiselVersion cross CrossVersion.full)
 )
-
-// Apply the Chisel settings
-lazy val roccacc = (project in file("."))
-  .settings(chiselSettings)
