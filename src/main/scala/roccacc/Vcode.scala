@@ -2,11 +2,11 @@ package roccacc
 
 import chisel3._
 import chisel3.util._
-import freechips.rocketchip.tile._
-import freechips.rocketchip.config._
-import freechips.rocketchip.diplomacy._
-import freechips.rocketchip.rocket._
-import freechips.rocketchip.tilelink._
+import org.chipsalliance.cde.tile._
+import org.chipsalliance.cde.config._
+import org.chipsalliance.cde.diplomacy._
+import org.chipsalliance.cde.rocket._
+import org.chipsalliance.cde.tilelink._
 
 /** The outer wrapping class for the RoccAcc accelerator.
   *

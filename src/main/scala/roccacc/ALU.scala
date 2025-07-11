@@ -2,8 +2,8 @@ package roccacc
 
 import chisel3._
 import chisel3.util._
-import freechips.rocketchip.config.Parameters
-import freechips.rocketchip.tile.CoreModule
+import org.chipsalliance.cde.config.Parameters
+import org.chipsalliance.cde.tile.CoreModule
 
 /** Externally-visible properties of the ALU.
   */
