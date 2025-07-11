@@ -32,4 +32,5 @@ class ALU(implicit p: Parameters) extends CoreModule()(p) {
 
   // ADD/SUB
   io.out := io.in1 + io.in2
+  io.cout := 0.U(xLen.W)  // Set cout to 0 for now
 }
