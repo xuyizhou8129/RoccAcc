@@ -83,6 +83,7 @@ class RoccAccImp(outer: RoccAcc) extends LazyRoCCModuleImp(outer) {
   val alu = Module(new ALU)
   val alu_out = Wire(UInt())
   // Hook up the ALU to RoccAcc signals
+  alu.io.dw := 1.U(1.W)  // Use 64-bit operations for now
   alu.io.fn := ctrl_sigs.alu_fn
   // FIXME: Only use rs1/rs2 if xs1/xs2 =1, respectively.
   alu.io.in1 := rocc_cmd.rs1

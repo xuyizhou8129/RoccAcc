@@ -22,6 +22,7 @@ object ALU {
 class ALU(implicit p: Parameters) extends CoreModule()(p) {
   import ALU._ // Import ALU object, so we do not have to fully-qualify names
   val io = IO(new Bundle {
+    val dw = Input(UInt(1.W))  // Data width: 0=32-bit, 1=64-bit
     val fn = Input(Bits(SZ_ALU_FN))
     // The two register content values passed over the RoCCCommand are xLen wide
     val in1 = Input(UInt(xLen.W))
