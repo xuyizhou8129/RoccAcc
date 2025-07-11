@@ -9,12 +9,9 @@ scalaVersion := "2.13.10"
 // ThisBuild / scalaVersion := "2.13.10"
 
 // Chosen to be the same as Chipyard
-val chiselVersion = "3.6.1"
+val chiselVersion = "6.7.0"
 
 lazy val chiselSettings = Seq(
-  libraryDependencies ++= Seq(
-    "edu.berkeley.cs" %% "chisel3" % chiselVersion,
-    "edu.berkeley.cs" %% "rocketchip" % "1.6.0"
-  ),
-  addCompilerPlugin("edu.berkeley.cs" % "chisel3-plugin" % chiselVersion cross CrossVersion.full)
+  libraryDependencies ++= Seq("org.chipsalliance" %% "chisel" % chiselVersion),
+  addCompilerPlugin("org.chipsalliance" % "chisel-plugin" % chiselVersion cross CrossVersion.full)
 )
