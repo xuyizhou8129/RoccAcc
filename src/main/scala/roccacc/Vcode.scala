@@ -89,7 +89,7 @@ class RoccAccImp(outer: RoccAcc) extends LazyRoCCModuleImp(outer) {
   alu.io.in1 := rocc_cmd.rs1
   alu.io.in2 := rocc_cmd.rs2
   alu_out := alu.io.out
-  alu_cout := alu.io.cout
+  // alu_cout := alu.io.cout
 
   /***************
    * RESPOND
