@@ -3,8 +3,8 @@ package roccacc
 import chisel3._
 import chisel3.util._
 import org.chipsalliance.cde.config.Parameters
-import org.chipsalliance.cde.tile.CoreModule
-import org.chipsalliance.cde.rocket.constants.MemoryOpConstants
+import freechips.rocketchip.tile.CoreModule
+import freechips.rocketchip.rocket.constants.MemoryOpConstants
 
 /* TODO: Investigate if we should use RoCCCoreIO.mem (DCacheFetcher) or
  * LazyRoCC.tlNode (DMemFetcher).
