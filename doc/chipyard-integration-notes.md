@@ -20,26 +20,29 @@ Create a new configuration file in `generators/chipyard/src/main/scala/config/`:
 
 Sims verilator, run a make command with a configs set
 
+1. Building Chipyard (only need to be done once)
 source env.sh
 (Set up environment variables)
 ./scripts/build-setup.sh -s 1
 ./build-setup.sh --skip-conda --skip-precompile --build-circt --skip-firesim --skip-marshal
 (Build and skip conda initialization)
 
+2. Building tests
 cd rocc-acc/test
 make clean
 make build
 
+3. Using sbt to do hardware compiling (from chisel/scala to verilog)
 cd /pool/xuyi/Project1_C/chipyardfork/accelerator && sbt
 project roccacc
 compile
 (hardware compilation, compile chisel and scala to verilog, create hardware description)
 
-Compilation from verilog to c++ code
+4.Compilation from verilog to binary
 cd /pool/xuyi/Project1_C/chipyardfork/accelerator
 source env.sh
 cd sims/verilator
 make CONFIG=RoccAccConfig
 
-Running Code: 
+5.Running Code: 
 ./simulator-chipyard.harness-RoccAccConfig /pool/xuyi/Project1_C/chipyardfork/accelerator/generators/rocc-acc/test/bin/rocc_add.riscv
