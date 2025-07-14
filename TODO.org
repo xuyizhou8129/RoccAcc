@@ -1,6 +1,6 @@
 #+TITLE: TODO List
 #+AUTHOR: Xuyi Zhou
 
-1. Get the Ping-Pong Test Working
-2. Better understanding of the code
-3. Writing the test folder
+1. Debug pingpong.c
+2. Make documentation more detailed
+3. Brainstorming what accelerators to build
