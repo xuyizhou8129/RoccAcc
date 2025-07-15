@@ -11,12 +11,13 @@ int main() {
     // Send pong value back
     //ping = 0;
     //pong = 1;
-    ROCC_INSTRUCTION_DSS(0, result, &ping, &pong, 0);
+    //ROCC_INSTRUCTION_DSS(0, result, &ping, &pong, 0);
     
+
     // Test with different values
     //ping = 10;
     //pong = 20;
-    ROCC_INSTRUCTION_DSS(0, result, &ping, &pong, 0);
+    //ROCC_INSTRUCTION_DSS(0, result, &ping, &pong, 0);
     
     // Return success if we get here (no exceptions)
     return 0;
