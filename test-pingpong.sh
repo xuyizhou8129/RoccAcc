@@ -1,44 +1,33 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
 
-# Test script for VCode ROCC accelerator pingpong test
-
-set -e
-
-echo "=== VCode ROCC Accelerator Pingpong Test ==="
-
-# Check if RISCV is set
-if [ -z "$RISCV" ]; then
-    echo "Error: RISCV environment variable is not set"
-    echo "Please set RISCV to point to your RISC-V toolchain"
-    exit 1
-fi
-
-echo "Using RISCV toolchain at: $RISCV"
-
-# Build the tests
-echo "Building tests..."
-cd test
+# 1) Build the Verilator testbench in rocc-acc/test
+echo "=== Building RoCC testbench ==="
+pushd generators/rocc-acc/test >/dev/null
 make clean
 make build
+popd >/dev/null
 
-# Check if pingpong binary was created
-if [ ! -f "bin/pingpong.riscv" ]; then
-    echo "Error: pingpong.riscv binary was not created"
-    exit 1
-fi
+# 2) Compile the Chisel/Scala RoCC generator
+echo "=== Compiling Chisel/Scala RoCC generator ==="
+pushd . >/dev/null
+cd /pool/xuyi/Project1_C/chipyardfork/accelerator
+sbt "project roccacc" compile
+popd >/dev/null
 
-echo "Test binary created successfully: bin/pingpong.riscv"
+# 3) Source env and build the Verilator simulator
+echo "=== Building Verilator simulator ==="
+pushd /pool/xuyi/Project1_C/chipyardfork/accelerator >/dev/null
+source env.sh
+cd sims/verilator
+make CONFIG=RoccAccConfig
+popd >/dev/null
 
-# Display binary info
-echo "Binary information:"
-file bin/pingpong.riscv
-echo ""
+# 4) Run the simulation
+echo "=== Running simulation ==="
+pushd /pool/xuyi/Project1_C/chipyardfork/accelerator/sims/verilator >/dev/null
+./simulator-chipyard.harness-RoccAccConfig \
+  /pool/xuyi/Project1_C/chipyardfork/accelerator/generators/rocc-acc/test/bin/rocc_add.riscv
+popd >/dev/null
 
-echo "=== Test Ready ==="
-echo "To run with Chipyard simulator:"
-echo "1. Follow the integration steps in chipyard-integration-steps.md"
-echo "2. Build Chipyard with: make CONFIG=VCodeConfig"
-echo "3. Run with: ./simulator-chipyard-VCodeConfig -v test/vcode-rocc/test/bin/pingpong.riscv"
-echo ""
-echo "For local testing (if you have a RISC-V simulator):"
-echo "qemu-riscv64-static bin/pingpong.riscv" 
+echo "=== All done! ==="
