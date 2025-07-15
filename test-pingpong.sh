@@ -3,7 +3,7 @@ set -euo pipefail
 
 # 1) Build the Verilator testbench in rocc-acc/test
 echo "=== Building RoCC testbench ==="
-pushd generators/rocc-acc/test >/dev/null
+pushd /pool/xuyi/Project1_C/chipyardfork/accelerator/generators/rocc-acc/test >/dev/null
 make clean
 make build
 popd >/dev/null
