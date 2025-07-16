@@ -1,33 +1,35 @@
 #!/usr/bin/env bash
 set -euo pipefail
+# 1) Source env variables
+echo "=== Sourcing env variables ==="
+cd /pool/xuyi/Project1_C/chipyardfork/accelerator
 
-# 1) Build the Verilator testbench in rocc-acc/test
+# Set default values to avoid unbound variable errors
+export LD_LIBRARY_PATH="${LD_LIBRARY_PATH:-}"
+export RISCV="${RISCV:-}"
+
+source env.sh
+
+# 2) Build the Verilator testbench in rocc-acc/test
 echo "=== Building RoCC testbench ==="
-pushd /pool/xuyi/Project1_C/chipyardfork/accelerator/generators/rocc-acc/test >/dev/null
+cd /pool/xuyi/Project1_C/chipyardfork/accelerator/generators/rocc-acc/test
 make clean
 make build
-popd >/dev/null
 
-# 2) Compile the Chisel/Scala RoCC generator
+# 3) Compile the Chisel/Scala RoCC generator
 echo "=== Compiling Chisel/Scala RoCC generator ==="
-pushd . >/dev/null
 cd /pool/xuyi/Project1_C/chipyardfork/accelerator
 sbt "project roccacc" compile
-popd >/dev/null
 
-# 3) Source env and build the Verilator simulator
+# 4) Source env and build the Verilator simulator
 echo "=== Building Verilator simulator ==="
-pushd /pool/xuyi/Project1_C/chipyardfork/accelerator >/dev/null
-source env.sh
-cd sims/verilator
+cd /pool/xuyi/Project1_C/chipyardfork/accelerator/sims/verilator
 make CONFIG=RoccAccConfig
-popd >/dev/null
 
-# 4) Run the simulation
+# 5) Run the simulation
 echo "=== Running simulation ==="
-pushd /pool/xuyi/Project1_C/chipyardfork/accelerator/sims/verilator >/dev/null
+cd /pool/xuyi/Project1_C/chipyardfork/accelerator/sims/verilator
 ./simulator-chipyard.harness-RoccAccConfig \
   /pool/xuyi/Project1_C/chipyardfork/accelerator/generators/rocc-acc/test/bin/rocc_add.riscv
-popd >/dev/null
 
 echo "=== All done! ==="
