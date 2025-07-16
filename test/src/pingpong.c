@@ -11,7 +11,7 @@ int main() {
     // Send pong value back
     //ping = 0;
     //pong = 1;
-    //ROCC_INSTRUCTION_DSS(0, result, &ping, &pong, 0);
+    ROCC_INSTRUCTION_DSS(0, result, &ping, &pong, 0);
     
 
     // Test with different values

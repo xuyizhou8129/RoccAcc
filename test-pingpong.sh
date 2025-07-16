@@ -13,6 +13,7 @@ source env.sh
 # 2) Build the Verilator testbench in rocc-acc/test
 echo "=== Building RoCC testbench ==="
 cd /pool/xuyi/Project1_C/chipyardfork/accelerator/generators/rocc-acc/test
+export MAKEFLAGS=-j24
 make clean
 make build
 
@@ -21,15 +22,19 @@ echo "=== Compiling Chisel/Scala RoCC generator ==="
 cd /pool/xuyi/Project1_C/chipyardfork/accelerator
 sbt "project roccacc" compile
 
-# 4) Source env and build the Verilator simulator
+# 4) Source env and build the Verilator simulator, run the pingpong test, at the same time generate the vcd file for
 echo "=== Building Verilator simulator ==="
 cd /pool/xuyi/Project1_C/chipyardfork/accelerator/sims/verilator
-make CONFIG=RoccAccConfig
+export MAKEFLAGS=-j24
+make CONFIG=RoccAccConfig BINARY=/pool/xuyi/Project1_C/chipyardfork/accelerator/generators/rocc-acc/test/bin/pingpong.riscv LOADMEM=1 run-binary-debug
 
-# 5) Run the simulation
+: <<'COMMENT'
+# 6) Run the simulation
 echo "=== Running simulation ==="
 cd /pool/xuyi/Project1_C/chipyardfork/accelerator/sims/verilator
 ./simulator-chipyard.harness-RoccAccConfig \
-  /pool/xuyi/Project1_C/chipyardfork/accelerator/generators/rocc-acc/test/bin/rocc_add.riscv
+  /pool/xuyi/Project1_C/chipyardfork/accelerator/generators/rocc-acc/test/bin/pingpong.riscv
+COMMENT
 
 echo "=== All done! ==="
+
