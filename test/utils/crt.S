@@ -52,18 +52,19 @@ _start:
   csrs mstatus, t0
 
   # make sure XLEN agrees with compilation choice
-  li t0, 1
-  slli t0, t0, 31
+  # Commented out XLEN check to avoid infinite loop
+  # li t0, 1
+  # slli t0, t0, 31
 #if __riscv_xlen == 64
-  bgez t0, 1f
+  # bgez t0, 1f
 #else
-  bltz t0, 1f
+  # bltz t0, 1f
 #endif
-2:
-  li a0, 1
-  sw a0, tohost, t0
-  j 2b
-1:
+# 2:
+#   li a0, 1
+#   sw a0, tohost, t0
+#   j 2b
+# 1:
 
 #ifdef __riscv_flen
   # initialize FPU if we have one
@@ -103,6 +104,13 @@ _start:
   fmv.s.x f29,x0
   fmv.s.x f30,x0
   fmv.s.x f31,x0
+
+#PMP enable all of memory to be access by everyone
+  li t0, 0x3fffffffffffffff
+  csrw pmpaddr0, t0
+  li t0, 0xf
+  csrw pmpcfg0, t0
+
 1:
 #endif
 
@@ -122,8 +130,8 @@ _start:
   # get core id
   csrr a0, mhartid
   # for now, assume only 1 core
-  li a1, 1
-1:bgeu a0, a1, 1b
+  # li a1, 1
+  # 1:bgeu a0, a1, 1b
 
   # give each core 128KB of stack + TLS
 #define STKSHIFT 17

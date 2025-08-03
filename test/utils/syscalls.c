@@ -61,7 +61,13 @@ void __attribute__((noreturn)) tohost_exit(uintptr_t code)
 
 uintptr_t __attribute__((weak)) handle_trap(uintptr_t cause, uintptr_t epc, uintptr_t regs[32])
 {
-  tohost_exit(1337);
+  if (cause & 8000000000000000ULL) {
+    // This was an interrupt
+    tohost_exit(2022);
+  } else {
+    // This was an exception
+    tohost_exit(1337);
+  }
 }
 
 void exit(int code)
@@ -111,13 +117,14 @@ void _init(int cid, int nc)
   // only single-threaded programs should ever get here.
   int ret = main(0, 0);
 
-  char buf[NUM_COUNTERS * 32] __attribute__((aligned(64)));
-  char* pbuf = buf;
-  for (int i = 0; i < NUM_COUNTERS; i++)
-    if (counters[i])
-      pbuf += sprintf(pbuf, "%s = %d\n", counter_names[i], counters[i]);
-  if (pbuf != buf)
-    printstr(buf);
+  // Commented out performance counter printing to avoid syscall hang
+  // char buf[NUM_COUNTERS * 32] __attribute__((aligned(64)));
+  // char* pbuf = buf;
+  // for (int i = 0; i < NUM_COUNTERS; i++)
+  //   if (counters[i])
+  //     pbuf += sprintf(pbuf, "%s = %d\n", counter_names[i], counters[i]);
+  // if (pbuf != buf)
+  //   printstr(buf);
 
   exit(ret);
 }

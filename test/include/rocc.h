@@ -92,4 +92,13 @@
               "i" (0), "i" (funct));                                    \
     } while (0)
 
+// Simple ROCC instruction for our specific use case
+#define ROCC_INSTRUCTION_SIMPLE(rd, rs1, rs2, funct)                    \
+    do {                                                                \
+        __asm__ __volatile__ (                                          \
+            ".insn r CUSTOM_0, 7, %3, %0, %1, %2\n\t"                   \
+            : "=r" (rd)                                                 \
+            : "r" (rs1), "r" (rs2), "i" (funct));                       \
+    } while (0)
+
 #endif // ROCC_H

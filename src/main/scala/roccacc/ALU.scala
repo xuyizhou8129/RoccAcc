@@ -5,6 +5,9 @@ import chisel3.util._
 import org.chipsalliance.cde.config.Parameters
 import freechips.rocketchip.tile.CoreModule
 
+//Now the logic assumes that the caclulation is done instantaneously once the data is fed
+//Will need to change this after the ALU unit becomes more complicated
+
 /** Externally-visible properties of the ALU.
   */
 object ALU {

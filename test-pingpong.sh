@@ -26,7 +26,7 @@ sbt "project roccacc" compile
 echo "=== Building Verilator simulator ==="
 cd /pool/xuyi/Project1_C/chipyardfork/accelerator/sims/verilator
 export MAKEFLAGS=-j24
-make CONFIG=RoccAccConfig BINARY=/pool/xuyi/Project1_C/chipyardfork/accelerator/generators/rocc-acc/test/bin/pingpong.riscv LOADMEM=1 run-binary-debug
+make CONFIG=RoccAccConfig BINARY=/pool/xuyi/Project1_C/chipyardfork/accelerator/generators/rocc-acc/test/bin/rocc_add.riscv LOADMEM=1 run-binary-debug
 
 : <<'COMMENT'
 # 6) Run the simulation

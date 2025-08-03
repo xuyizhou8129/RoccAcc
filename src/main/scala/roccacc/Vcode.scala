@@ -7,6 +7,7 @@ import org.chipsalliance.cde.config._
 import freechips.rocketchip.diplomacy._
 import freechips.rocketchip.rocket._
 import freechips.rocketchip.tilelink._
+import freechips.rocketchip.rocket.constants.MemoryOpConstants
 
 /** The outer wrapping class for the RoccAcc accelerator.
   *
@@ -76,6 +77,22 @@ class RoccAccImp(outer: RoccAcc) extends LazyRoCCModuleImp(outer) {
    * operating on the data.
    **************/
   val data_fetcher = Module(new DCacheFetcher)
+  
+  // Connect memory interface using separated req/resp like working implementation
+  data_fetcher.io.req <> io.mem.req
+  data_fetcher.io.resp <> io.mem.resp
+  
+  // Control signals
+  data_fetcher.io.start := cmd.valid && ctrl_sigs.legal
+  data_fetcher.io.addr1 := rocc_cmd.rs1
+  data_fetcher.io.addr2 := rocc_cmd.rs2
+  
+  // Debug print when data fetcher starts
+  when(cmd.valid && ctrl_sigs.legal) {
+    if(p(RoccAccPrintfEnable)) {
+      printf("DEBUG: Starting data fetcher, busy=%d\n", data_fetcher.io.busy)
+    }
+  }
 
   /***************
    * EXECUTE
@@ -85,34 +102,88 @@ class RoccAccImp(outer: RoccAcc) extends LazyRoCCModuleImp(outer) {
   // Hook up the ALU to RoccAcc signals
   alu.io.dw := 1.U(1.W)  // Use 64-bit operations for now
   alu.io.fn := ctrl_sigs.alu_fn
-  // FIXME: Only use rs1/rs2 if xs1/xs2 =1, respectively.
-  alu.io.in1 := rocc_cmd.rs1
-  alu.io.in2 := rocc_cmd.rs2
+  // Use fetched data, otherwise the inputs are 0
+  alu.io.in1 := Mux(data_fetcher.io.data1_valid, data_fetcher.io.data1, 0.U)
+  alu.io.in2 := Mux(data_fetcher.io.data2_valid, data_fetcher.io.data2, 0.U)
   alu_out := alu.io.out
   // alu_cout := alu.io.cout
 
   /***************
    * RESPOND
    **************/
+  // Remember when we need to respond (since cmd.valid is only high for one cycle)
+  val response_needed = RegInit(false.B)
+  val response_fed = RegInit(false.B)
+  val response_finished = RegInit(false.B)
+  
+  // Set response_needed when we get a valid command that needs a response
+  when(cmd.valid && ctrl_sigs.legal && rocc_inst.xd) {
+    response_needed := true.B
+  }
+  
+  // Clear response_needed when we send the response, ensures that we only send one response
+  when(io.resp.ready && response_needed && data_fetcher.io.done) {
+    response_needed := false.B
+  }
+  
   // Check if the accelerator needs to respond
-  val response_required = cmd.valid && ctrl_sigs.legal && rocc_inst.xd
+  val response_required = response_needed && data_fetcher.io.done
+  
+  // Debug print when response_needed is set
+  when(cmd.valid && ctrl_sigs.legal && rocc_inst.xd) {
+    if(p(RoccAccPrintfEnable)) {
+      printf("DEBUG: response_needed set to TRUE\n")
+      printf("DEBUG: data_fetcher.io.busy=%d, data_fetcher.io.done=%d\n", 
+        data_fetcher.io.busy, data_fetcher.io.done)
+    }
+  }
+
   val response = Reg(new RoCCResponse)
-  response.rd := rocc_inst.rd
-  response.data := alu_out
+  
+  // Update response data when data fetching is complete and response is required
+  when(response_required) {
+    response.data := alu_out
+    response.rd := rocc_inst.rd
+    response_fed := true.B
+  }
   // Send response to main processor
   /* TODO: Response can only be sent once all memory transactions and arithmetic
    * operations have completed. */
-  when(response_required && io.resp.ready) {
+  when(response_fed && io.resp.ready) {
     if(p(RoccAccPrintfEnable)) {
+      printf("DEBUG: Calling io.resp.enq(response)\n")
       printf("Main processor ready for response? %d\n", io.resp.ready)
+      printf("Sending response: rd=%x data=%x (data1=%x + data2=%x)\n", 
+        response.rd, response.data, data_fetcher.io.data1, data_fetcher.io.data2)
     }
     io.resp.enq(response) // Sends response & sets valid bit
+    response_fed := false.B
+    response_finished := true.B
     if(p(RoccAccPrintfEnable)) {
       printf("RoccAcc accelerator made response bits valid? %d\n", io.resp.valid)
     }
+    // TODO: Find way to make valid response false when no response needed or ready
+    // io.resp.valid := false.B // Always invalid response until otherwise
   }
-  // TODO: Find way to make valid response false when no response needed or ready
-  // io.resp.valid := false.B // Always invalid response until otherwise
+  // Detect when response_finished becomes true (edge detection)
+  val response_finished_prev = RegNext(response_finished, false.B)
+  when(response_finished && !response_finished_prev) {
+    io.resp.valid := false.B
+    response_finished := false.B
+  }
+  
+  // Debug print to track io.resp.valid changes
+  val resp_valid_prev = RegNext(io.resp.valid, false.B)
+  when(io.resp.valid && !resp_valid_prev) {
+    if(p(RoccAccPrintfEnable)) {
+      printf("DEBUG: io.resp.valid became TRUE\n")
+    }
+  }
+  when(!io.resp.valid && resp_valid_prev) {
+    if(p(RoccAccPrintfEnable)) {
+      printf("DEBUG: io.resp.valid became FALSE\n")
+    }
+  }
 }
 
 /** Mixin to build a chip that includes a RoccAcc accelerator. */
