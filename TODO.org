@@ -1,6 +1,7 @@
 #+TITLE: TODO List
 #+AUTHOR: Xuyi Zhou
 
-1. Debug pingpong.c
-2. Make documentation more detailed
-3. Brainstorming what accelerators to build
+1. Debug dechachefetcher
+2. Brainstorming Structure of Accelerator
+
+
