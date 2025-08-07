@@ -17,6 +17,9 @@ object ALU {
   /** Unknown ALU function */
   def FN_X = BitPat("b????")
   def FN_ADD = BitPat("b0000")
+  
+  //Check if the command is an add
+  def isAdd(cmd: UInt) = cmd === FN_ADD
 }
 
 /** Implementation of an ALU.
@@ -31,10 +34,22 @@ class ALU(implicit p: Parameters) extends CoreModule()(p) {
     val in1 = Input(UInt(xLen.W))
     val in2 = Input(UInt(xLen.W))
     val out = Output(UInt(xLen.W))
-    val cout = Output(UInt(xLen.W))
+    val valid = Output(Bool())
   })
 
-  // ADD/SUB
-  io.out := io.in1 + io.in2
-  io.cout := 0.U(xLen.W)  // Set cout to 0 for now
+  val alu_output_valid = RegInit(false.B)
+  
+  // Check if addition is required
+  val is_addition = isAdd(io.fn)
+  
+  // Default outputs
+  io.out := 0.U(xLen.W)
+  io.valid := alu_output_valid
+  
+  when(is_addition) {
+    io.out := io.in1 + io.in2
+    alu_output_valid := true.B
+  }.otherwise {
+    alu_output_valid := false.B
+  }
 }
