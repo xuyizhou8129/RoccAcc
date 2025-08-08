@@ -41,6 +41,10 @@ class ALU(implicit p: Parameters) extends CoreModule()(p) {
   
   // Check if addition is required
   val is_addition = isAdd(io.fn)
+  val is_addition_prev = RegInit(false.B)
+  // Detect rising edge of is_addition
+  val is_addition_rising = is_addition && !is_addition_prev
+  val is_addition_falling = !is_addition && is_addition_prev
   
   // Default outputs
   io.out := 0.U(xLen.W)
@@ -48,8 +52,17 @@ class ALU(implicit p: Parameters) extends CoreModule()(p) {
   
   when(is_addition) {
     io.out := io.in1 + io.in2
+  }
+  
+  // Set valid only on rising edge
+  when(is_addition_rising) {
     alu_output_valid := true.B
-  }.otherwise {
+    is_addition_prev := true.B
+  }
+  when(alu_output_valid) {
     alu_output_valid := false.B
+  }
+  when(is_addition_falling) {
+    is_addition_prev := false.B
   }
 }

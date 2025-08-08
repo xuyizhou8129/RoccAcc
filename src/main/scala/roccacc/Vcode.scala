@@ -33,11 +33,22 @@ class RoccAcc(opcodes: OpcodeSet)(implicit p: Parameters) extends LazyRoCC(opcod
 class RoccAccImp(outer: RoccAcc) extends LazyRoCCModuleImp(outer) {
   // io is "implicit" because we inherit from LazyRoCCModuleImp.
   // io is the RoCCCoreIO
-  val cmd = Queue(io.cmd)
-  val rocc_cmd = cmd.bits // The entire RoCC Command provided to the accelerator
-  val rocc_inst = rocc_cmd.inst // The customX instruction in instruction stream
-  cmd.ready := true.B // Always ready to accept a command
+  val rocc_io = io
+  val cmd = rocc_io.cmd
+  val roccCmd = Reg(new RoCCCommand)
+  val cmdValid = RegInit(false.B)
 
+  val roccInst = roccCmd.inst // The customX instruction in instruction stream
+  val returnReg = roccInst.rd
+  val cmdStatus = roccCmd.status
+  
+  // Always ready to accept commands
+  cmd.ready := true.B
+  
+  when(cmd.fire) {
+    roccCmd := cmd.bits // The entire RoCC Command provided to the accelerator
+    cmdValid := true.B
+  }
   /* Create the decode table at the top-level of the implementation
    * If additional instructions are added as separate classes in Instructions.scala
    * they can be added above BinOpDecode class. */
@@ -49,25 +60,14 @@ class RoccAccImp(outer: RoccAcc) extends LazyRoCCModuleImp(outer) {
    * DECODE
    **************/
   // Decode instruction, yielding control signals
-  val ctrl_sigs = Wire(new CtrlSigs()).decode(rocc_inst.funct, decode_table)
+  val ctrl_sigs = Wire(new CtrlSigs()).decode(roccInst.funct, decode_table)
 
   // If invalid instruction, raise exception
-  val exception = cmd.valid && !ctrl_sigs.legal
+  val exception = cmdValid && !ctrl_sigs.legal
   io.interrupt := exception
   when(exception) {
     if(p(RoccAccPrintfEnable)) {
       printf("Raising exception to processor through interrupt!\nILLEGAL INSTRUCTION!\n");
-    }
-  }
-
-  /* The valid bit is raised to true by the main processor when the command is
-   * sent to the DecoupledIO Queue. */
-  when(cmd.valid) {
-    // TODO: Find a nice way to condense these conditional prints
-    if(p(RoccAccPrintfEnable)) {
-      printf("Got funct7 = 0x%x\trs1.val=0x%x\trs2.val=0x%x\n",
-        rocc_inst.funct, rocc_cmd.rs1, rocc_cmd.rs2)
-      printf("The instruction legal: %d\n", ctrl_sigs.legal)
     }
   }
 
@@ -83,16 +83,9 @@ class RoccAccImp(outer: RoccAcc) extends LazyRoCCModuleImp(outer) {
   data_fetcher.io.resp <> io.mem.resp
   
   // Control signals
-  data_fetcher.io.start := cmd.valid && ctrl_sigs.legal
-  data_fetcher.io.addr1 := rocc_cmd.rs1
-  data_fetcher.io.addr2 := rocc_cmd.rs2
-  
-  // Debug print when data fetcher starts
-  when(cmd.valid && ctrl_sigs.legal) {
-    if(p(RoccAccPrintfEnable)) {
-      printf("DEBUG: Starting data fetcher, busy=%d\n", data_fetcher.io.busy)
-    }
-  }
+  data_fetcher.io.start := cmdValid && ctrl_sigs.legal
+  data_fetcher.io.addr1 := roccCmd.rs1
+  data_fetcher.io.addr2 := roccCmd.rs2
 
   /***************
    * EXECUTE
@@ -114,23 +107,34 @@ class RoccAccImp(outer: RoccAcc) extends LazyRoCCModuleImp(outer) {
   val response_needed = RegInit(false.B)
   
   // Set response_needed when we get a valid command that needs a response
-  when(cmd.valid && ctrl_sigs.legal && rocc_inst.xd) {
+  when(cmdValid && ctrl_sigs.legal && roccInst.xd) {
     response_needed := true.B
+    cmdValid := false.B
   }
   
   val response = Reg(new RoCCResponse)
   val response_valid = RegInit(false.B)
+  val response_fed = RegInit(false.B)
   
   // Default values
   io.resp.bits := response
   io.resp.valid := response_valid
   
   // Prepare response data when computation is complete
-  when(alu.io.valid && response_needed && data_fetcher.io.done) { 
+  when(alu.io.valid && response_needed) { 
     response.data := alu_out
-    response.rd := rocc_inst.rd
+    response.rd := roccInst.rd
+    response_fed := true.B
+  }
+  //Fire when response is ready to be sent
+  when(response_fed){
     response_valid := true.B
     response_needed := false.B
+    response_fed := false.B
+        if(p(RoccAccPrintfEnable)) {
+      printf("Got funct7 = 0x%x\trs1.val=0x%x\trs2.val=0x%x\n", roccInst.funct, roccCmd.rs1, roccCmd.rs2)
+      printf("The response is: %d\n", response.data)
+    }
   }
   
   // Clear response valid when handshake occurs

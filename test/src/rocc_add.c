@@ -8,6 +8,7 @@ int c = 0;
 
 int main() {
     ROCC_INSTRUCTION_DSS(0, c, &a, &b, 0);
-    ROCC_INSTRUCTION_DSS(0, c, &a, &b, 0);
+    ROCC_INSTRUCTION_DSS(0, b, &c, &a, 0);
+    ROCC_INSTRUCTION_DSS(0, a, &b, &c, 0);
     return 0;
 }
