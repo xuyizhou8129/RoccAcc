@@ -1,0 +1,48 @@
+organization := "edu.northwestern.eecs"
+
+version := "0.0"
+
+name := "rocc-acc"
+
+// Chosen to be the same version as rocket-chip
+scalaVersion := "2.13.12"
+//scalaVersion := "2.12.15"
+// ThisBuild / scalaVersion := "2.13.10"
+
+// Chosen to be the same as Chipyard
+val chiselVersion = "6.7.0"
+
+val scalaTestVersion = "3.2.18"
+// libraryDependencies ++= Seq(
+//     "org.chipsalliance" %% "chisel" % chiselVersion,
+//     // "org.chipsalliance" %% "cde" % "1.6.0",
+//     // "org.chipsalliance" %% "rocketchip" % "1.6.0",
+//     // "edu.berkeley.cs" %% "rocket-macros" % "1.6.0",
+//     // Bring in ScalaTest"
+//     // "org.scalatest"     %% "scalatest" % scalaTestVersion,
+//     "org.scalatest"     %% "scalatest" % scalaTestVersion % Test,
+//     // "org.scalatest"     %% "scalatest" % scalaTestVersion % "test",
+//     // "org.scalactic"     %% "scalactic" % scalaTestVersion, 
+//     // "org.scalactic"     %% "scalactic" % scalaTestVersion % "test",
+//     )
+
+// addCompilerPlugin("org.chipsalliance" % "chisel-plugin" % chiselVersion cross CrossVersion.full)
+
+// lazy val chiselSettings = Seq(
+//   addCompilerPlugin("org.chipsalliance" % "chisel-plugin" % chiselVersion cross CrossVersion.full)
+// )
+
+
+lazy val roccacc = (project in file("."))
+  .settings(
+    name := "rocc-acc",
+    scalaVersion := "2.13.12",
+    libraryDependencies ++= Seq(
+      "org.chipsalliance" %% "chisel"    % chiselVersion,
+      "org.scalatest"     %% "scalatest" % scalaTestVersion % Test,
+      // "org.chipsalliance" %% "cde"       % "1.6",
+      // "org.chipsalliance" %% "hardfloat" % "1.6",
+      // "freechips.rocketchip" %% "rocketchip" % "1.6"
+    ),
+    addCompilerPlugin("org.chipsalliance" % "chisel-plugin" % chiselVersion cross CrossVersion.full)
+  )
