@@ -29,6 +29,8 @@ object GFOperations {
   def FN_DIV = BitPat("b0010")  // GF Division
   def FN_POW = BitPat("b0011")  // GF Exponentiation
   def FN_INV = BitPat("b0100")  // GF Inverse
+  def FN_RED = BitPat("b0101")  // GF Reduction
+  def FN_GIP = BitPat("b0110")  // GF Irreducible Polynomial
   
   // Helper functions to check operation type
   def isAdd(cmd: UInt) = cmd === FN_ADD
@@ -36,6 +38,8 @@ object GFOperations {
   def isDiv(cmd: UInt) = cmd === FN_DIV
   def isPow(cmd: UInt) = cmd === FN_POW
   def isInv(cmd: UInt) = cmd === FN_INV
+  def isRed(cmd: UInt) = cmd === FN_RED
+  def isGip(cmd: UInt) = cmd === FN_GIP
 }
 
 /** Implementation of Galois Field Operations
@@ -48,9 +52,9 @@ class GFOperations(fieldSize: Int = GFOperations.DEFAULT_FIELD_SIZE)(implicit p:
   
   val io = IO(new Bundle {
     val fn = Input(Bits(SZ_GF_FN))           // Operation function code
-    val operand1 = Input(UInt(fieldSize.W))  // First operand
-    val operand2 = Input(UInt(fieldSize.W))  // Second operand (not used for inverse)
-    val result = Output(UInt(fieldSize.W))   // Operation result
+    val operand1 = Input(UInt((2 * fieldSize).W))  // First operand
+    val operand2 = Input(UInt((2 * fieldSize).W))  // Second operand (not used for inverse)
+    val result = Output(UInt((2 * fieldSize).W))  // Operation result
     val valid = Output(Bool())               // Result valid signal
   })
   
@@ -64,7 +68,7 @@ class GFOperations(fieldSize: Int = GFOperations.DEFAULT_FIELD_SIZE)(implicit p:
   // GF Addition (XOR operation)
   //*Todo: Implement the Valid Singal Properly
   when(isAdd(io.fn)) {
-    io.result := io.operand1 ^ io.operand2
+    io.result := gfAdd(io.operand1, io.operand2, fieldSize)
     result_valid := true.B
   }.elsewhen(isMul(io.fn)) {
     // GF Multiplication using polynomial multiplication
@@ -83,6 +87,14 @@ class GFOperations(fieldSize: Int = GFOperations.DEFAULT_FIELD_SIZE)(implicit p:
     // GF Inverse
     io.result := gfInverse(io.operand1, fieldSize)
     result_valid := true.B
+  }.elsewhen(isRed(io.fn)) {
+    // GF Reduction
+    io.result := gfReduce(io.operand1, io.operand2, fieldSize)
+    result_valid := true.B
+  }.elsewhen(isGip(io.fn)) {
+    // GF Irreducible Polynomial
+    io.result := getIrreduciblePolynomial(fieldSize)
+    result_valid := true.B
   }.otherwise {
     // No valid operation - clear valid signal
     result_valid := false.B
@@ -95,6 +107,15 @@ class GFOperations(fieldSize: Int = GFOperations.DEFAULT_FIELD_SIZE)(implicit p:
     * @param fieldSize Size of the field
     * @return Result of GF multiplication
     */
+  def gfAdd(a: UInt, b: UInt, fieldSize: Int): UInt = {
+    val result = Wire(UInt(fieldSize.W))
+    // Reduce inputs first, then do GF addition (XOR)
+    val reducedA = gfReduce(a, getIrreduciblePolynomial(fieldSize), fieldSize)
+    val reducedB = gfReduce(b, getIrreduciblePolynomial(fieldSize), fieldSize)
+    result := reducedA ^ reducedB
+    result
+  }
+
   def gfMultiply(a: UInt, b: UInt, fieldSize: Int): UInt = {
     val result = Wire(UInt(fieldSize.W))
     
@@ -208,19 +229,37 @@ class GFOperations(fieldSize: Int = GFOperations.DEFAULT_FIELD_SIZE)(implicit p:
   
   /** Reduce polynomial modulo irreducible polynomial
     * 
+    * This function iteratively reduces a polynomial by checking if it's within
+    * the field size. If not, it performs GF addition (XOR) with the irreducible
+    * polynomial shifted appropriately.
+    * 
     * @param poly Polynomial to reduce
     * @param irreduciblePoly Irreducible polynomial
     * @param fieldSize Size of the field
     * @return Reduced polynomial
     */
   def gfReduce(poly: UInt, irreduciblePoly: UInt, fieldSize: Int): UInt = {
-    val result = Wire(UInt(fieldSize.W))
+  val result = Wire(UInt(fieldSize.W))
+  
+  when(poly === 0.U) {
+    result := 0.U
+  }.otherwise {
+    // Create sequence of bit positions to check - FROM MSB TO LSB
+    val bitPositions = (fieldSize * 2 - 1 to fieldSize by -1).toSeq
     
-    // Simple reduction: just take the lower fieldSize bits
-    // This works for basic cases where we don't need complex reduction
-    result := poly(fieldSize - 1, 0)
-    result
+    // Use foldLeft to build the reduction chain
+    val finalTemp = bitPositions.foldLeft(poly) { (currentTemp, bitPos) =>
+      val shiftAmount = (bitPos - fieldSize).U
+      Mux(currentTemp(bitPos), 
+          currentTemp ^ (irreduciblePoly << shiftAmount),
+          currentTemp)
+    }
+    
+    result := finalTemp(fieldSize - 1, 0)
   }
+  
+  result
+}
   
   /** Get irreducible polynomial for given field size
     * 
