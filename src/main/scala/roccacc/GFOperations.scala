@@ -42,6 +42,92 @@ object GFOperations {
   def isGip(cmd: UInt) = cmd === FN_GIP
 }
 
+class GFReduce(fieldSize: Int = GFOperations.DEFAULT_FIELD_SIZE) extends Module {
+  val io = IO(new Bundle {
+    val in1 = Decoupled(UInt((2 * fieldSize).W))
+    val out = Output(Flipped(Valid(UInt(fieldSize.W))))
+  })
+  object ReducerState extends ChiselEnum {
+    val idle, computing, done = Value
+  }
+
+  val reduce_state = RegInit(ReducerState.idle)
+  val reduce_result = RegInit(0.U((fieldSize).W))
+  val reduce_temp_poly = RegInit(0.U((2 * fieldSize).W))
+  val reduce_irreducible = "b100011101".U
+  io.in1.valid := false.B  
+  io.in1.bits := 0.U((2 * fieldSize).W)//Required Initialization
+  io.out.bits := 8.U((fieldSize).W)
+  io.out.valid := false.B
+  
+  switch(reduce_state) {
+  is(ReducerState.idle) { // IDLE
+    io.out.valid := false.B
+    io.out.bits := 8.U((fieldSize).W)
+    when(io.in1.valid) {
+      reduce_state := ReducerState.computing
+      reduce_temp_poly := io.in1.bits
+      printf("reduce called, Reducing %b with irreducible %x\n", io.in1.bits, reduce_irreducible)
+    }
+  }
+  
+is(ReducerState.computing) { // COMPUTING
+    printf("in computing state, reducing %b\n", reduce_temp_poly)
+    when(reduce_temp_poly === 0.U) {
+        reduce_result := 0.U
+        printf("reduced to 0, returning 0\n")
+        reduce_state := ReducerState.done
+    }.otherwise {
+        // Find the position of the highest set bit
+        val msb = PriorityEncoder(Reverse(reduce_temp_poly))
+        val polyWidth = (fieldSize * 2).U
+        val actualMsb = polyWidth - 1.U - msb  // Convert to actual MSB position
+        
+        when(actualMsb < fieldSize.U) {
+            // Already reduced
+            reduce_result := reduce_temp_poly(fieldSize - 1, 0)
+            reduce_state := ReducerState.done
+        }.otherwise {
+            // Need to reduce
+            val shiftAmount = actualMsb - fieldSize.U
+            reduce_temp_poly := reduce_temp_poly ^ (reduce_irreducible << shiftAmount)
+            // Stay in COMPUTING
+        }
+    }
+}
+is(ReducerState.done) { // DONE
+    printf("done, returning %b\n", reduce_result)
+    reduce_state := ReducerState.idle
+    io.out.valid := true.B
+    io.out.bits := reduce_result
+}
+}
+}
+
+// class GFAdd(fieldSize: Int = GFOperations.DEFAULT_FIELD_SIZE) extends Module {
+//   val io = IO(new Bundle {
+//     val in1 = Input(UInt((2 * fieldSize).W))
+//     val in2 = Input(UInt((2 * fieldSize).W))
+//     val out = Output(UInt((fieldSize).W))
+//   })
+
+//   val reducer1 = new GFReduce(fieldSize)
+//   val reducer2 = new GFReduce(fieldSize)
+
+//   reducer1.in := io.in1
+//   reducer1.valid := true.B
+//   reducer2.in = io.in2
+//   reducer2.valid := true.B
+
+//   // Reduce inputs first, then do GF addition (XOR)
+//   // val reducedA = gfReduce(io.in1, getIrreduciblePolynomial(fieldSize), fieldSize)
+//   // val reducedB = gfReduce(io.in2, getIrreduciblePolynomial(fieldSize), fieldSize)
+//   when (reducer1.out.valid && reducer2.out.valid) {
+//     out.bits := reducer1.out.bits ^ reducer2.out.bits
+//     out.valid := true.B
+//   }
+// }
+
 /** Implementation of Galois Field Operations
   * 
   * @param fieldSize The size of the Galois Field (e.g., 8 for GF(2^8))
@@ -60,11 +146,16 @@ class GFOperations(fieldSize: Int = GFOperations.DEFAULT_FIELD_SIZE)(implicit p:
   
   // Internal registers for state management
   val result_valid = RegInit(false.B)
-  
   // Default outputs
   io.result := 0.U(fieldSize.W)
   io.valid := result_valid
   
+val reduce_state = RegInit(0.U(2.W))  // 0: IDLE, 1: COMPUTING, 2: DONE
+val reduce_temp_poly = RegInit(0.U((fieldSize * 2).W))
+val reduce_irreducible = RegInit(0.U((fieldSize + 1).W))
+val reduce_result = RegInit(0.U(fieldSize.W))
+val reduce_requested = RegInit(false.B)
+
   // GF Addition (XOR operation)
   //*Todo: Implement the Valid Singal Properly
   when(isAdd(io.fn)) {
@@ -135,9 +226,19 @@ class GFOperations(fieldSize: Int = GFOperations.DEFAULT_FIELD_SIZE)(implicit p:
       val term6 = Mux(b(6), a << 6.U, 0.U)
       val term7 = Mux(b(7), a << 7.U, 0.U)
       
+      val term0_reduced = gfReduce(term0, getIrreduciblePolynomial(fieldSize), fieldSize)
+      val term1_reduced = gfReduce(term1, getIrreduciblePolynomial(fieldSize), fieldSize)
+      val term2_reduced = gfReduce(term2, getIrreduciblePolynomial(fieldSize), fieldSize)
+      val term3_reduced = gfReduce(term3, getIrreduciblePolynomial(fieldSize), fieldSize)
+      val term4_reduced = gfReduce(term4, getIrreduciblePolynomial(fieldSize), fieldSize)
+      val term5_reduced = gfReduce(term5, getIrreduciblePolynomial(fieldSize), fieldSize)
+      val term6_reduced = gfReduce(term6, getIrreduciblePolynomial(fieldSize), fieldSize)
+      val term7_reduced = gfReduce(term7, getIrreduciblePolynomial(fieldSize), fieldSize)
       // XOR all terms together
-      val tempResult = term0 ^ term1 ^ term2 ^ term3 ^ term4 ^ term5 ^ term6 ^ term7
-      result := tempResult(fieldSize - 1, 0)
+      result := term0_reduced ^ term1_reduced ^ term2_reduced ^ term3_reduced ^ term4_reduced ^ term5_reduced ^ term6_reduced ^ term7_reduced
+      // val extendedTempResult = tempResult.zext(1) // Extend to 16 bits
+      // result := gfReduce(extendedTempResult, getIrreduciblePolynomial(fieldSize), fieldSize)
+      //* Todo: Implement this properly to check it there is a problem with the reduction
     }
     
     result
@@ -229,38 +330,83 @@ class GFOperations(fieldSize: Int = GFOperations.DEFAULT_FIELD_SIZE)(implicit p:
   
   /** Reduce polynomial modulo irreducible polynomial
     * 
-    * This function iteratively reduces a polynomial by checking if it's within
-    * the field size. If not, it performs GF addition (XOR) with the irreducible
-    * polynomial shifted appropriately.
+    * This function iteratively reduces a polynomial by:
+    * 1. Finding the highest (most significant) non-zero bit position
+    * 2. If that bit position is outside the field (>= fieldSize), reducing it
+    *    by XORing with the irreducible polynomial shifted appropriately
+    * 3. Repeating until all bits are within the field size
+    * 
+    * Sequential implementation: finds MSB first, then reduces if needed
     * 
     * @param poly Polynomial to reduce
     * @param irreduciblePoly Irreducible polynomial
     * @param fieldSize Size of the field
     * @return Reduced polynomial
     */
-  def gfReduce(poly: UInt, irreduciblePoly: UInt, fieldSize: Int): UInt = {
-  val result = Wire(UInt(fieldSize.W))
+ def gfReduce(poly: UInt, irreduciblePoly: UInt, fieldSize: Int): UInt = {
+  reduce_temp_poly := poly
+  reduce_irreducible := irreduciblePoly
+  reduce_requested := true.B  // Request reduction
   
-  when(poly === 0.U) {
-    result := 0.U
-  }.otherwise {
-    // Create sequence of bit positions to check - FROM MSB TO LSB
-    val bitPositions = (fieldSize * 2 - 1 to fieldSize by -1).toSeq
-    
-    // Use foldLeft to build the reduction chain
-    val finalTemp = bitPositions.foldLeft(poly) { (currentTemp, bitPos) =>
-      val shiftAmount = (bitPos - fieldSize).U
-      Mux(currentTemp(bitPos), 
-          currentTemp ^ (irreduciblePoly << shiftAmount),
-          currentTemp)
+  reduce_result  // Return current result (may be from previous operation)
+}
+
+switch(reduce_state) {
+  is(0.U) { // IDLE
+    when(reduce_requested) {
+      reduce_state := 1.U
+      reduce_requested := false.B
     }
-    
-    result := finalTemp(fieldSize - 1, 0)
   }
   
-  result
+is(1.U) { // COMPUTING
+    when(reduce_temp_poly === 0.U) {
+        reduce_result := 0.U
+        reduce_state := 2.U
+    }.otherwise {
+        // Find the position of the highest set bit
+        val msb = PriorityEncoder(Reverse(reduce_temp_poly))
+        val polyWidth = (fieldSize * 2).U
+        val actualMsb = polyWidth - 1.U - msb  // Convert to actual MSB position
+        
+        when(actualMsb < fieldSize.U) {
+            // Already reduced
+            reduce_result := reduce_temp_poly(fieldSize - 1, 0)
+            reduce_state := 2.U
+        }.otherwise {
+            // Need to reduce
+            val shiftAmount = actualMsb - fieldSize.U
+            reduce_temp_poly := reduce_temp_poly ^ (reduce_irreducible << shiftAmount)
+            // Stay in COMPUTING
+        }
+    }
 }
   
+  is(2.U) { // DONE
+    reduce_state := 0.U  // Return to IDLE
+  }
+}
+ 
+//   def gfReduce(poly: UInt, irreduciblePoly: UInt, fieldSize: Int): UInt = {
+//     val result = Wire(UInt(fieldSize.W))
+    
+//     // Combinational reduction - check each bit position
+//     val temp = Wire(Vec(fieldSize + 1, UInt((fieldSize * 2).W)))
+//     temp(0) := poly
+    
+//     for (i <- 0 until fieldSize) {
+//         val bitPos = (fieldSize * 2 - 1) - i
+//         when(temp(i)(bitPos)) {
+//             val shiftAmount = bitPos - fieldSize
+//             temp(i + 1) := temp(i) ^ (irreduciblePoly << shiftAmount)
+//         }.otherwise {
+//             temp(i + 1) := temp(i)
+//         }
+//     }
+    
+//     result := temp(fieldSize)(fieldSize - 1, 0)
+//     result
+// }
   /** Get irreducible polynomial for given field size
     * 
     * @param fieldSize Size of the field
