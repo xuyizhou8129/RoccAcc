@@ -66,15 +66,15 @@ class GFReduce(fieldSize: Int = GFOperations.DEFAULT_FIELD_SIZE) extends Module 
     when(io.in1.valid) {
       reduce_state := ReducerState.computing
       reduce_temp_poly := io.in1.bits
-      printf("reduce called, Reducing %b with irreducible %x\n", io.in1.bits, reduce_irreducible)
+      printf("(Reduction) reduce called, Reducing %b with irreducible %x\n", io.in1.bits, reduce_irreducible)
     }
   }
   
 is(ReducerState.computing) { // COMPUTING
-    printf("in computing state, reducing %b\n", reduce_temp_poly)
+    printf("(Reduction) in computing state, reducing %b\n", reduce_temp_poly)
     when(reduce_temp_poly === 0.U) {
         reduce_result := 0.U
-        printf("reduced to 0, returning 0\n")
+        printf("(Reduction) reduced to 0, returning 0\n")
         reduce_state := ReducerState.done
     }.otherwise {
         // Find the position of the highest set bit
@@ -95,7 +95,7 @@ is(ReducerState.computing) { // COMPUTING
     }
 }
 is(ReducerState.done) { // DONE
-    printf("done, returning %b\n", reduce_result)
+    printf("(Reduction) done, returning %b\n", reduce_result)
     reduce_state := ReducerState.idle
     io.out.valid := true.B
     io.out.bits := reduce_result
@@ -103,29 +103,93 @@ is(ReducerState.done) { // DONE
   }
 }
 
-// class GFAdd(fieldSize: Int = GFOperations.DEFAULT_FIELD_SIZE) extends Module {
-//   val io = IO(new Bundle {
-//     val in1 = Input(UInt((2 * fieldSize).W))
-//     val in2 = Input(UInt((2 * fieldSize).W))
-//     val out = Output(UInt((fieldSize).W))
-//   })
+class GFAdd(fieldSize: Int = GFOperations.DEFAULT_FIELD_SIZE) extends Module {
+    val io = IO(new Bundle {
+    val in1 = Flipped(Decoupled(UInt((2 * fieldSize).W)))
+    val in2 = Flipped(Decoupled(UInt((2 * fieldSize).W)))
+    val out = Valid(UInt(fieldSize.W))
+  })
+  object AdderState extends ChiselEnum {
+    val idle, computing, done = Value
+  }
+  val adder_state = RegInit(AdderState.idle)
+  val adder_result = RegInit(0.U((fieldSize).W))
+  val reducer1_done = RegInit(false.B)
+  val reducer2_done = RegInit(false.B)
+  val reducer1_sent = RegInit(false.B)
+  val reducer2_sent = RegInit(false.B)
+  val reduced1 = RegInit(0.U((2 * fieldSize).W))
+  val reduced2 = RegInit(0.U((2 * fieldSize).W))
+  io.in1.ready := adder_state === AdderState.idle
+  io.in2.ready := adder_state === AdderState.idle
+  io.out.bits := 0.U((fieldSize).W)
+  io.out.valid := false.B
+  val reducer1 = Module(new GFReduce(fieldSize))
+  val reducer2 = Module(new GFReduce(fieldSize))
+  reducer1.io.in1.bits := 0.U((2 * fieldSize).W)
+  reducer1.io.in1.valid := false.B
+  reducer2.io.in1.bits := 0.U((2 * fieldSize).W)
+  reducer2.io.in1.valid := false.B
 
-//   val reducer1 = new GFReduce(fieldSize)
-//   val reducer2 = new GFReduce(fieldSize)
+  switch(adder_state) {
+  is(AdderState.idle) { // IDLE
+    printf("(Addition) in idle state, waiting for inputs\n")
+    reducer1_sent := false.B
+    reducer2_sent := false.B
+    reducer1_done := false.B
+    reducer2_done := false.B
+    adder_result := 0.U((fieldSize).W)
+    io.out.valid := false.B
+    io.out.bits := 0.U((fieldSize).W)
+    when(io.in1.valid && io.in2.valid) {
+      adder_state := AdderState.computing
+    }
+  }
+is(AdderState.computing) { // COMPUTING
+    printf("(Addition) in computing state, reducing inputs\n")
+    when(!reducer1_sent) {
+  reducer1.io.in1.bits := io.in1.bits
+    reducer1.io.in1.valid := true.B
+    reducer1_sent := true.B
+  }
+  when(!reducer2_sent) {
+    reducer2.io.in1.bits := io.in2.bits
+    reducer2.io.in1.valid := true.B
+    reducer2_sent := true.B
+  }
+  when(reducer1.io.out.valid) {
+    printf("(Addition)reducer1 done, returning %b\n", reducer1.io.out.bits)
+    reduced1 := reducer1.io.out.bits
+    reducer1_done := true.B
+    reducer1.io.in1.valid := false.B
+  }
+  when(reducer2.io.out.valid) {
+    printf("(Addition)reducer2 done, returning %b\n", reducer2.io.out.bits)
+    reduced2 := reducer2.io.out.bits
+    reducer2_done := true.B
+    reducer2.io.in1.valid := false.B
+  }
+    when(reducer1_done && reducer2_done) {
+        printf("(Addition) reducers done, adding %b and %b\n", reduced1, reduced2)
+        adder_result := reduced1 ^ reduced2
+        reducer1.io.in1.valid := false.B
+        reducer2.io.in1.valid := false.B
+        adder_state := AdderState.done
+    }
+}
+is(AdderState.done) { // DONE
+    printf("(Addition) done, returning %b\n", adder_result)
+    reducer1.io.in1.bits := 0.U((2 * fieldSize).W)
+    reducer2.io.in1.bits := 0.U((2 * fieldSize).W)
+    io.out.valid := true.B
+    io.out.bits := adder_result
+    adder_state := AdderState.idle
+    reduced1 := 0.U((2 * fieldSize).W)
+    reduced2 := 0.U((2 * fieldSize).W)
+    }
+  }
+}
 
-//   reducer1.in := io.in1
-//   reducer1.valid := true.B
-//   reducer2.in = io.in2
-//   reducer2.valid := true.B
-
-//   // Reduce inputs first, then do GF addition (XOR)
-//   // val reducedA = gfReduce(io.in1, getIrreduciblePolynomial(fieldSize), fieldSize)
-//   // val reducedB = gfReduce(io.in2, getIrreduciblePolynomial(fieldSize), fieldSize)
-//   when (reducer1.out.valid && reducer2.out.valid) {
-//     out.bits := reducer1.out.bits ^ reducer2.out.bits
-//     out.valid := true.B
-//   }
-// }
 
 /** Implementation of Galois Field Operations
   * 

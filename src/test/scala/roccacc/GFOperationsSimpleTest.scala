@@ -38,19 +38,73 @@ class GFOperationsSimpleTest extends AnyFunSpec with ParallelTestExecution {
       }
     }
 
-    it("performs GF reduction for polynomial") {
+    it("performs GF Reduction") {
       simulate(new GFReduce(fieldSize)) { dut =>
-        // Test Reduction of Irreducible Polynomial
+      // Reduction of 100011101
         dut.io.in1.valid.poke(true.B)              
         dut.io.in1.bits.poke("b100011101".U) 
-        dut.clock.step(3)
+        while (!dut.io.out.valid.peek().litToBoolean) {
+    dut.clock.step()
+  }
         dut.io.out.bits.expect("b00000000".U)
         dut.io.out.valid.expect(true.B)
 
+    // Reset for second test
+    dut.io.in1.valid.poke(false.B)  // Reset valid signal
+    dut.clock.step(2)  // Wait for module to return to idle and stabilize
+
+        // Reduction of 1100011101
         dut.io.in1.valid.poke(true.B)             
         dut.io.in1.bits.poke("b1100011101".U)  
-        dut.clock.step(5)
+        while (!dut.io.out.valid.peek().litToBoolean) {
+    dut.clock.step()
+  }
         dut.io.out.bits.expect("b00111010".U)
+        dut.io.out.valid.expect(true.B)
+      }
+    }
+
+    it("performs GF Addition") {
+      simulate(new GFAdd(fieldSize)) { dut =>
+        // Addition of 100011101 and 100011101
+        dut.io.in1.valid.poke(true.B)
+        dut.io.in2.valid.poke(true.B)
+        dut.io.in1.bits.poke("b100011101".U)
+        dut.io.in2.bits.poke("b100011101".U) 
+       while (!dut.io.out.valid.peek().litToBoolean) {
+    dut.clock.step()
+  }
+        dut.io.out.bits.expect("b00000000".U)
+        dut.io.out.valid.expect(true.B)
+
+        // Reset for second test
+        dut.io.in1.valid.poke(false.B)  // Reset valid signal
+        dut.clock.step(3)  // Wait for module to return to idle and stabilize
+
+       // Addition of 1100011101 and 100011101
+        dut.io.in1.valid.poke(true.B)             
+        dut.io.in1.bits.poke("b1100011101".U)  
+        dut.io.in2.valid.poke(true.B)
+        dut.io.in2.bits.poke("b100011101".U)
+        while (!dut.io.out.valid.peek().litToBoolean) {
+    dut.clock.step()
+  }
+        dut.io.out.bits.expect("b00111010".U)
+        dut.io.out.valid.expect(true.B)
+
+         dut.io.in1.valid.poke(false.B)  // Reset valid signal
+         dut.io.in2.valid.poke(false.B)  // Reset valid signal
+        dut.clock.step(3)  // Wait for module to return to idle and stabilize
+
+        // Addition of 1100101101 and 1100011101
+        dut.io.in1.valid.poke(true.B)             
+        dut.io.in1.bits.poke("b1100101101".U)  
+        dut.io.in2.valid.poke(true.B)
+        dut.io.in2.bits.poke("b1100011101".U)
+        while (!dut.io.out.valid.peek().litToBoolean) {
+    dut.clock.step()
+  }
+        dut.io.out.bits.expect("b00110000".U)
         dut.io.out.valid.expect(true.B)
       }
     }
@@ -64,49 +118,6 @@ class GFOperationsSimpleTest extends AnyFunSpec with ParallelTestExecution {
     //   }
     // }
 
-    // it("performs GF addition (XOR)") {
-    //   simulate(new GFOperations(fieldSize)) { dut =>
-    //     // Test 0 + 1 = 1
-    //     dut.io.fn.poke(0.U) // FN_ADD = BitPat("b0000")
-    //     dut.io.operand1.poke(0.U)
-    //     dut.io.operand2.poke(1.U)
-    //     dut.clock.step(1)
-    //     dut.io.result.expect(1.U)
-    //     dut.io.valid.expect(true.B)
-        
-    //     // Test 1 + 1 = 0 (XOR)
-    //     dut.io.fn.poke(0.U) // FN_ADD = BitPat("b0000")
-    //     dut.io.operand1.poke(1.U)
-    //     dut.io.operand2.poke(1.U)
-    //     dut.clock.step(1)
-    //     dut.io.result.expect(0.U)
-    //     dut.io.valid.expect(true.B)
-        
-    //     // Test 5 + 3 = 6 (XOR)
-    //     dut.io.fn.poke(0.U) // FN_ADD = BitPat("b0000")
-    //     dut.io.operand1.poke(5.U)
-    //     dut.io.operand2.poke(3.U)
-    //     dut.clock.step(1)
-    //     dut.io.result.expect(6.U) // 5 XOR 3 = 6
-    //     dut.io.valid.expect(true.B)
-
-    //     // Test (Irreducible Polynomial)
-    //     dut.io.fn.poke(0.U) // FN_ADD = BitPat("b0000")
-    //     dut.io.operand1.poke("b100011101".U)
-    //     dut.io.operand2.poke("b100011101".U)
-    //     dut.clock.step(1)
-    //     dut.io.result.expect(0.U) 
-    //     dut.io.valid.expect(true.B)
-
-    //     // Test (Irreducible Polynomial)
-    //     dut.io.fn.poke(0.U) // FN_ADD = BitPat("b0000")
-    //     dut.io.operand1.poke("b100011101".U)
-    //     dut.io.operand2.poke("b100011111".U)
-    //     dut.clock.step(1)
-    //     dut.io.result.expect(2.U) 
-    //     dut.io.valid.expect(true.B)
-    //   }
-    // }
 
   //   it("performs GF multiplication for irreducible polynomial") {
   //     simulate(new GFOperations(fieldSize)) { dut =>
