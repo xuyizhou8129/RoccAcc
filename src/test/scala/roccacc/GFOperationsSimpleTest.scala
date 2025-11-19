@@ -41,16 +41,15 @@ class GFOperationsSimpleTest extends AnyFunSpec with ParallelTestExecution {
     it("performs GF reduction for polynomial") {
       simulate(new GFReduce(fieldSize)) { dut =>
         // Test Reduction of Irreducible Polynomial
-        dut.io.in1.valid.poke(true.B)              // Outer valid (Decoupled)
-        dut.io.in1.bits.poke("b100011101".U)  // The actual data
-        dut.clock.step()
+        dut.io.in1.valid.poke(true.B)              
+        dut.io.in1.bits.poke("b100011101".U) 
+        dut.clock.step(3)
         dut.io.out.bits.expect("b00000000".U)
         dut.io.out.valid.expect(true.B)
 
-        // Test Reduction of Irreducible Polynomial
-        dut.io.in1.valid.poke(true.B)              // Outer valid (Decoupled)
-        dut.io.in1.bits.poke("b1100011101".U)  // The actual data
-        dut.clock.step()
+        dut.io.in1.valid.poke(true.B)             
+        dut.io.in1.bits.poke("b1100011101".U)  
+        dut.clock.step(5)
         dut.io.out.bits.expect("b00111010".U)
         dut.io.out.valid.expect(true.B)
       }

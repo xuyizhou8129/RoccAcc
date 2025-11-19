@@ -44,8 +44,8 @@ object GFOperations {
 
 class GFReduce(fieldSize: Int = GFOperations.DEFAULT_FIELD_SIZE) extends Module {
   val io = IO(new Bundle {
-    val in1 = Decoupled(UInt((2 * fieldSize).W))
-    val out = Output(Flipped(Valid(UInt(fieldSize.W))))
+    val in1 = Flipped(Decoupled(UInt((2 * fieldSize).W)))
+    val out = Valid(UInt(fieldSize.W))
   })
   object ReducerState extends ChiselEnum {
     val idle, computing, done = Value
@@ -55,8 +55,7 @@ class GFReduce(fieldSize: Int = GFOperations.DEFAULT_FIELD_SIZE) extends Module 
   val reduce_result = RegInit(0.U((fieldSize).W))
   val reduce_temp_poly = RegInit(0.U((2 * fieldSize).W))
   val reduce_irreducible = "b100011101".U
-  io.in1.valid := false.B  
-  io.in1.bits := 0.U((2 * fieldSize).W)//Required Initialization
+  io.in1.ready := reduce_state === ReducerState.idle
   io.out.bits := 8.U((fieldSize).W)
   io.out.valid := false.B
   
@@ -100,8 +99,8 @@ is(ReducerState.done) { // DONE
     reduce_state := ReducerState.idle
     io.out.valid := true.B
     io.out.bits := reduce_result
-}
-}
+    }
+  }
 }
 
 // class GFAdd(fieldSize: Int = GFOperations.DEFAULT_FIELD_SIZE) extends Module {
